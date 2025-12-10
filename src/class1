@@ -1,0 +1,78 @@
+#include "AS726X.h"  // Assuming this is needed for external hardware interaction
+#include <Arduino.h> // Common embedded library
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <cmath>
+#include <cstddef> // For size_t
+
+class Stuff
+{
+public:
+    template <typename T>
+    float calculateTrimmedMean(std::vector<T> &values)
+    {
+        int length = values.size();
+
+        // Handle empty or very small vectors
+        if (length == 0)
+        {
+            return 0.0f;
+        }
+
+        int trim_count = std::lround(0.02 * length);
+
+        // Check if there are enough elements left after trimming
+        if (length <= 2 * trim_count)
+        {
+            // If trimming removes all or too many elements, return the simple mean.
+            double sum = std::accumulate(values.begin(), values.end(), 0.0);
+            return (float)(sum / length);
+        }
+
+        // --- Efficient In-Place Trimming using std::nth_element ---
+
+        // 1. Partition the vector: moves the smallest 'trim_count' values to the beginning region.
+        std::nth_element(values.begin(),
+                         values.begin() + trim_count,
+                         values.end());
+
+        // 2. Partition the remaining part: positions the element that marks the start of the
+        //    trimmed section from the high end.
+        std::nth_element(values.begin() + trim_count,
+                         values.end() - trim_count,
+                         values.end());
+
+        // --- Accumulate the Trimmed Range ---
+
+        auto start_it = values.begin() + trim_count;
+        auto end_it = values.end() - trim_count;
+
+        // Accumulate using 0.0 to ensure calculations are performed using double precision.
+        double sum = std::accumulate(start_it, end_it, 0.0);
+        size_t count = std::distance(start_it, end_it);
+
+        return (float)(sum / count);
+    }
+
+public:
+    // Expose the core functionality using template wrappers. These wrappers
+    // now accept vectors of any type (int, float, etc.) and forward to the template core.
+    template <typename T>
+    float getTrimmedMeanR(std::vector<T> &valueR) { return calculateTrimmedMean(valueR); }
+
+    template <typename T>
+    float getTrimmedMeanS(std::vector<T> &valueS) { return calculateTrimmedMean(valueS); }
+
+    template <typename T>
+    float getTrimmedMeanT(std::vector<T> &valueT) { return calculateTrimmedMean(valueT); }
+
+    template <typename T>
+    float getTrimmedMeanU(std::vector<T> &valueU) { return calculateTrimmedMean(valueU); }
+
+    template <typename T>
+    float getTrimmedMeanV(std::vector<T> &valueV) { return calculateTrimmedMean(valueV); }
+
+    template <typename T>
+    float getTrimmedMeanW(std::vector<T> &valueW) { return calculateTrimmedMean(valueW); }
+};
