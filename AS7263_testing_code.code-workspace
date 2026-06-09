@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "API test code",
+			"path": "../API test code"
+		}
+	],
+	"settings": {}
+}
