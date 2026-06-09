@@ -1,46 +1,94 @@
+Markdown
 
-This directory is intended for project specific (private) libraries.
-PlatformIO will compile them to static libraries and link into the executable file.
+# iGrowEmbed: Edge-AI NIR Spectrometer for Non-Destructive Watermelon Ripeness Detection
 
-The source code of each library should be placed in a separate directory
-("lib/your_library_name/[Code]").
+An enterprise-grade Edge-AI firmware designed for the ESP32 platform that utilizes Near-Infrared (NIR) spectroscopy and large language models (LLMs) to perform real-time, non-destructive evaluation of fruit quality.
 
-For example, see the structure of the following example libraries `Foo` and `Bar`:
+By pairing an AS7263 6-channel NIR spectral sensor with the Gemini API, this project demonstrates a highly efficient, low-memory architectural pattern for processing advanced agricultural analytics directly at the edge.
 
-|--lib
-|  |
-|  |--Bar
-|  |  |--docs
-|  |  |--examples
-|  |  |--src
-|  |     |- Bar.c
-|  |     |- Bar.h
-|  |  |- library.json (optional. for custom build options, etc) https://docs.platformio.org/page/librarymanager/config.html
-|  |
-|  |--Foo
-|  |  |- Foo.c
-|  |  |- Foo.h
-|  |
-|  |- README --> THIS FILE
-|
-|- platformio.ini
-|--src
-   |- main.c
+---
 
-Example contents of `src/main.c` using Foo and Bar:
-```
-#include <Foo.h>
-#include <Bar.h>
+## Key Features
 
-int main (void)
+- **Trimmed-Mean Signal Filtering:** Reduces optical noise and anomalies across 6 discrete spectral bands (R, S, T, U, V, W) by processing multi-sample reads through a robust trimmed mean algorithm before payload serialization.
+- **Memory-Optimized SSE Streaming:** Bypasses the memory constraints of the ESP32's limited RAM by utilizing a chunked HTTP Server-Sent Events (SSE) stream, processing JSON segments dynamically as they arrive instead of buffering a massive HTTP response payload.
+- **Dual-Bus I2C Configuration:** Implements isolated hardware I2C buses (`TwoWire`) running at 400kHz to communicate cleanly with both the AS7263 spectrometer and the 16x2 character LCD display without signal collision.
+- **Production-Ready Credential Isolation:** Leverages localized header compilation and explicit global `.gitignore` patterns to fully isolate API tokens and local network credentials from public version control.
+
+---
+
+## Hardware Architecture & Pin Mapping
+
+The system architecture relies on an ESP32 core communicating with an optical sensor and local display peripherals via independent I2C configurations:
+
+| Peripheral        | Component                    | Protocol / Pin         | ESP32 Pin Assignment |
+| :---------------- | :--------------------------- | :--------------------- | :------------------- |
+| **Spectrometer**  | AS7263 6-Channel NIR         | I2C1 SDA               | GPIO 21              |
+|                   |                              | I2C1 SCL               | GPIO 22              |
+|                   |                              | Hardware Reset (RST)   | GPIO 5               |
+| **Local Display** | 16x2 LCD (HD44780 + PCF8574) | Wire SDA               | GPIO 19              |
+|                   |                              | Wire SCL               | GPIO 18              |
+| **Input**         | Tactile Push Button          | Digital Input (Pullup) | GPIO 4               |
+
+---
+
+## Data & Execution Flow
+
+[Trigger Scan] ➔ [3x Multi-Sample Readings] ➔ [Trimmed Mean Calculation]
+│
+[16x2 LCD Output] ➔ [Dynamic Stream Parser] ➔ [Secure SSE POST to Gemini]
+
+1. **Optical Capture:** Tapping the physical capture button triggers a burst execution loop where the AS7263 records 3 distinct optical integration cycles.
+2. **Data Sanitization:** Raw counts from the 6 infrared wavelengths are processed to strip out outliers and compute a precise spectral signature string.
+3. **Network Handshake:** The ESP32 initializes an encrypted `WiFiClientSecure` connection to `generativelanguage.googleapis.com` using a `system_instruction` optimized payload.
+4. **Streaming Ingestion:** As the Gemini model streams the inference token-by-token via SSE, the custom parsing loop extracts the JSON text data and handles string line-wrapping on the fly to render immediate updates to the LCD.
+
+---
+
+## Setup & Installation
+
+This project is built using the **PlatformIO** ecosystem inside Visual Studio Code.
+
+### 1. Clone the Repository
+
+```bash
+git clone [https://github.com/ChiTheKing/Near-Infrared-NIR-sensor-with-AI.git](https://github.com/ChiTheKing/Near-Infrared-NIR-sensor-with-AI.git)
+cd Near-Infrared-NIR-sensor-with-AI
+2. Configure Your Private Credentials
+To run this firmware safely without exposing private tokens, create a secrets.h file inside your project's include/ directory:
+
+C++
+// include/secrets.h
+#ifndef SECRETS_H
+#define SECRETS_H
+
+#define GEMINI_API_KEY "YOUR_ACTUAL_GEMINI_API_KEY_HERE"
+#define WIFI_SSID "YOUR_WIFI_HOTSPOT_NAME"
+#define WIFI_PASS "YOUR_WIFI_PASSWORD"
+
+#endif
+Note: The project's .gitignore is pre-configured to ensure include/secrets.h is never pushed to GitHub.
+
+3. Build and Flash
+Open the project folder in VS Code with the PlatformIO extension active.
+
+Connect your ESP32 board via USB.
+
+Click the PlatformIO: Build icon in the status bar, followed by PlatformIO: Upload.
+
+ System Prompt & Model Targeting
+The firmware targets the lightweight, high-speed gemini-3.1-flash-lite-preview model, employing deterministic parameter configurations to ensure structural compatibility with character displays:
+
+JSON
 {
-  ...
+  "system_instruction": "Analyze NIR data for Watermelon. Only output 'Ripeness: X%' and 'HD: +/- X weeks'.",
+  "generationConfig": {
+    "maxOutputTokens": 40,
+    "temperature": 0.2
+  }
 }
+ Contributing & Research Collaboration
+This project is designed to serve as an accessible reference implementation for research papers, agritech startups, and academic investigations focusing on non-destructive fruit testing, embedded systems design, or localized Edge-AI architecture.
 
+If you use this codebase or architecture pattern in an academic or industrial capacity, feel free to open an issue or pull request to discuss expansions, adjustments, or alternative model structures!
 ```
-
-The PlatformIO Library Dependency Finder will find automatically dependent
-libraries by scanning project source files.
-
-More information about PlatformIO Library Dependency Finder
-- https://docs.platformio.org/page/librarymanager/ldf.html
